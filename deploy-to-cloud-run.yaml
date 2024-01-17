@@ -1,0 +1,39 @@
+name: Deploy to Cloud Run
+
+on:
+  workflow_call:
+    inputs:
+      workload-identity-provider:
+        required: true
+        type: string
+      service-account:
+        required: true
+        type: string
+      region:
+        required: true
+        type: string
+      docker-image:
+        required: true
+        type: string
+      docker-tag:
+        required: true
+        type: string
+
+jobs:
+  deploy-to-cloud-run:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ inputs.workload-identity-provider }}
+          service_account: ${{ inputs.service-account }}
+
+      - id: deploy
+        uses: google-github-actions/deploy-cloudrun@v1
+        with:
+          service: dev-merx
+          image: ${{ inputs.docker-image }}:${{ inputs.docker-tag }}
+          region: ${{ inputs.service-account }}
+
+      - name: "Use output"
+        run: 'curl "${{ steps.deploy.outputs.url }}"'

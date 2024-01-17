@@ -1,0 +1,70 @@
+name: Build image
+
+on:
+  workflow_call:
+    inputs:
+      project-id:
+        required: true
+        type: string
+      workload-identity-provider:
+        required: true
+        type: string
+      service-account:
+        required: true
+        type: string
+      docker-image:
+        required: true
+        type: string
+      docker-tag:
+        required: true
+        type: string
+      gar-location:
+        required: true
+        type: string
+      setup-platforms:
+        required: true
+        type: string
+      build-platforms:
+        type: string
+        default: linux/arm64
+
+jobs:
+  build-image:
+    runs-on: ubuntu-22.04
+    outputs:
+      tags: ${{ steps.meta.outputs.tags }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: ${{ inputs.setup-platforms }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ inputs.workload-identity-provider }}
+          service_account: ${{ inputs.service-account }}
+
+      - name: "Set up Cloud SDK"
+        uses: "google-github-actions/setup-gcloud@v1"
+        with:
+          project_id: ${{ inputs.project-id }}
+
+      - name: "Docker auth"
+        run: |-
+          gcloud auth configure-docker ${{ inputs.gar-location }}-docker.pkg.dev
+
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          platforms: ${{ inputs.build-platforms }}
+          push: true
+          tags: ${{ inputs.docker-image }}:${{ inputs.docker-tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
