@@ -35,7 +35,7 @@ jobs:
         uses: google-github-actions/deploy-cloudrun@v1
         with:
           service: ${{ inputs.service-name }}
-          image: ${{ inputs.docker-image }}:${{ inputs.docker-tag }}
+          image: '${{ inputs.docker-image }}:${{ inputs.docker-tag }}'
           region: ${{ inputs.service-account }}
 
       - name: "Use output"
