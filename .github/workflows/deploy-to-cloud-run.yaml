@@ -36,7 +36,7 @@ jobs:
         with:
           service: ${{ inputs.service-name }}
           image: '${{ inputs.docker-image }}:${{ inputs.docker-tag }}'
-          region: ${{ inputs.service-account }}
+          region: ${{ inputs.region }}
 
       - name: "Use output"
         run: 'curl "${{ steps.deploy.outputs.url }}"'
