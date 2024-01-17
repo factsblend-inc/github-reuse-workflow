@@ -30,7 +30,7 @@ on:
 
 jobs:
   build-image:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     outputs:
       tags: ${{ steps.meta.outputs.tags }}
     steps:

@@ -5,7 +5,7 @@ on:
 
 jobs:
   test:
-    runs-on: Large-GitHub-hosted-runners
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4

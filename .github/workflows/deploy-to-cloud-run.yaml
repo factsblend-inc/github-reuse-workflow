@@ -12,6 +12,9 @@ on:
       region:
         required: true
         type: string
+      service-name:
+        required: true
+        type: string
       docker-image:
         required: true
         type: string
@@ -21,7 +24,7 @@ on:
 
 jobs:
   deploy-to-cloud-run:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - uses: google-github-actions/auth@v1
         with:
@@ -31,7 +34,7 @@ jobs:
       - id: deploy
         uses: google-github-actions/deploy-cloudrun@v1
         with:
-          service: dev-merx
+          service: ${{ inputs.service-name }}
           image: ${{ inputs.docker-image }}:${{ inputs.docker-tag }}
           region: ${{ inputs.service-account }}
 
