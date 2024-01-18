@@ -21,6 +21,9 @@ on:
       docker-tag:
         required: true
         type: string
+      metadata-file-path:
+        required: true
+        type: string
 
 jobs:
   deploy-to-cloud-run:
@@ -37,6 +40,7 @@ jobs:
           service: ${{ inputs.service-name }}
           image: '${{ inputs.docker-image }}:${{ inputs.docker-tag }}'
           region: ${{ inputs.region }}
+          metadata: ${{ inputs.metadata-file-path }}
 
       - name: "Use output"
         run: 'curl "${{ steps.deploy.outputs.url }}"'
