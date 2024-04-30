@@ -9,10 +9,10 @@ on:
       service-account:
         required: true
         type: string
-      cloudflare-account-id:
+      google-cloud-project-id:
         required: true
         type: string
-      google-cloud-project-id:
+      cloudflare-account-id:
         required: true
         type: string
       cloudflare-credential-secret-id:
