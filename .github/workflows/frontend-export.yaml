@@ -44,7 +44,7 @@ jobs:
           echo -e "${{ inputs.env }}" >> $GITHUB_ENV
           echo -e "${{ secrets.mySecrets }}" >> $GITHUB_ENV
 
-      - run: pnpm export
+      - run: pnpm run build
         env:
           TAG_VERSION: ${{ inputs.tag-version }}
 
