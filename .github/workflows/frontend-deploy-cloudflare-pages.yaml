@@ -1,0 +1,81 @@
+name: Frontend deploy
+
+on:
+  workflow_call:
+    inputs:
+      workload-identity-provider:
+        required: true
+        type: string
+      service-account:
+        required: true
+        type: string
+      cloudflare-account-id:
+        required: true
+        type: string
+      google-cloud-project-id:
+        required: true
+        type: string
+      cloudflare-credential-secret-id:
+        required: true
+        type: string
+      secret-zone-id-key:
+        required: true
+        type: string
+      cloudflare-page-project-name:
+        required: true
+        type: string
+      branch:
+        required: true
+        type: string
+      download-artifact-name:
+        required: false
+        default: out
+        type: string
+
+jobs:
+  frontend-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download a single artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.download-artifact-name }}
+
+      - name: Remove 404.html
+        run: rm 404.html
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ inputs.workload-identity-provider }}
+          service_account: ${{ inputs.service-account }}
+
+      - id: 'get-cloudflare-credential'
+        uses: 'google-github-actions/get-secretmanager-secrets@v2'
+        with:
+          secrets: |-
+            cloudflare-credential:${{ inputs.google-cloud-project-id }}/${{ inputs.cloudflare-credential-secret-id }}
+
+      - name: Get Cloudflare api token
+        id: get-cloudflare-secret
+        run: |
+          CLOUDFLARE_ZONE_ID=$(echo ${{steps.get-cloudflare-credential.output.cloudflare-credential}} | jq '."${{ inputs.secret-zone-id-key }}"' | tr -d '"')
+          CLOUDFLARE_API_TOKEN=$(echo ${{steps.get-cloudflare-credential.output.cloudflare-credential}} | jq .api_token | tr -d '"')
+          echo "::add-mask::$CLOUDFLARE_ZONE_ID"
+          echo "::add-mask::$CLOUDFLARE_API_TOKEN"
+          echo "zone-id=$CLOUDFLARE_ZONE_ID" >> $GITHUB_OUTPUT
+          echo "api-token=$CLOUDFLARE_API_TOKEN" >> $GITHUB_OUTPUT
+
+      - name: Publish
+        uses: cloudflare/wrangler-action@v3
+        env:
+          CLOUDFLARE_TOKEN: ${{ steps.get-cloudflare-secret.outputs.api-token }}
+        with:
+          apiToken: ${{ steps.get-cloudflare-secret.outputs.api-token }}
+          accountId: ${{ inputs.cloudflare-account-id }}
+          command: pages publish --project-name=${{ inputs.cloudflare-page-project-name }} --branch ${{ inputs.branch }} ./
+
+      - name: Purge Cloudflare cache
+        uses: jakejarvis/cloudflare-purge-action@master
+        env:
+          CLOUDFLARE_ZONE: ${{ steps.get-cloudflare-secret.outputs.zone-id }}
+          CLOUDFLARE_TOKEN: ${{ steps.get-cloudflare-secret.outputs.api-token }}
