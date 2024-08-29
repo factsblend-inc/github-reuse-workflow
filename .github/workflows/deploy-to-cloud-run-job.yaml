@@ -32,5 +32,5 @@ jobs:
           region: ${{ github.event.inputs.region }}
           metadata: ${{ github.event.inputs.metadata-file-path }}
 
-      - name: "Use output"
+      - name: 'Use output'
         run: 'curl "${{ steps.deploy.outputs.url }}"'
