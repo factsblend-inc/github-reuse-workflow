@@ -12,6 +12,12 @@ on:
       job:
         required: true
         type: string
+      workload-identity-provider:
+        required: true
+        type: string
+      service-account:
+        required: true
+        type: string
 
 jobs:
   deploy-to-cloud-run-job:
