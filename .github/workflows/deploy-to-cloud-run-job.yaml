@@ -3,6 +3,12 @@ name: Deploy to Cloud Run Job
 on:
   workflow_call:
     inputs:
+      workload-identity-provider:
+        required: true
+        type: string
+      service-account:
+        required: true
+        type: string
       region:
         required: true
         type: string
@@ -10,12 +16,6 @@ on:
         required: true
         type: string
       job:
-        required: true
-        type: string
-      workload-identity-provider:
-        required: true
-        type: string
-      service-account:
         required: true
         type: string
 
@@ -28,15 +28,15 @@ jobs:
 
       - uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ github.event.inputs.workload-identity-provider }}
-          service_account: ${{ github.event.inputs.service-account }}
+          workload_identity_provider: ${{ inputs.workload-identity-provider }}
+          service_account: ${{ inputs.service-account }}
 
       - id: deploy
         uses: google-github-actions/deploy-cloudrun@v2
         with:
-          job: ${{ github.event.inputs.job }}
-          region: ${{ github.event.inputs.region }}
-          metadata: ${{ github.event.inputs.metadata-file-path }}
+          job: ${{ inputs.job }}
+          region: ${{ inputs.region }}
+          metadata: ${{ inputs.metadata-file-path }}
 
       - name: 'Use output'
         run: 'curl "${{ steps.deploy.outputs.url }}"'
