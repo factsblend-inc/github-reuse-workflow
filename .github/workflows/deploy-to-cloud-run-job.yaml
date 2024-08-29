@@ -37,6 +37,3 @@ jobs:
           job: ${{ inputs.job }}
           region: ${{ inputs.region }}
           metadata: ${{ inputs.metadata-file-path }}
-
-      - name: 'Use output'
-        run: 'curl "${{ steps.deploy.outputs.url }}"'
