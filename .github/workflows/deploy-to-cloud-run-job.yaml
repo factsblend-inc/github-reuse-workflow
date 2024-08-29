@@ -15,9 +15,6 @@ on:
       metadata-file-path:
         required: true
         type: string
-      job:
-        required: true
-        type: string
 
 jobs:
   deploy-to-cloud-run-job:
@@ -34,6 +31,8 @@ jobs:
       - id: deploy
         uses: google-github-actions/deploy-cloudrun@v2
         with:
-          job: ${{ inputs.job }}
           region: ${{ inputs.region }}
           metadata: ${{ inputs.metadata-file-path }}
+
+      - name: 'Use output'
+        run: 'curl "${{ steps.deploy.outputs.url }}"'
