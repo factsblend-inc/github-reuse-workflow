@@ -23,6 +23,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Download Cloud Run YAML artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: cloudrun-yaml
+
       - uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ inputs.workload-identity-provider }}
