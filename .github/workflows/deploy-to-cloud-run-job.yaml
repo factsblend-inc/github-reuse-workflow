@@ -18,7 +18,7 @@ on:
 
 jobs:
   deploy-to-cloud-run-job:
-    runs-on: ubuntu-latest
+    runs-on: buildjet-2vcpu-ubuntu-2204
     steps:
       - name: Checkout
         uses: actions/checkout@v4
