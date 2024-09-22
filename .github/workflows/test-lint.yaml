@@ -49,13 +49,6 @@ jobs:
       - run: pnpm lint
       - run: pnpm test:cov
 
-      - name: SonarCloud Scan
-        if: success() # Skips this step if previous steps failed
-        uses: sonarsource/sonarcloud-github-action@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
       - name: Upload test coverage artifacts
         uses: actions/upload-artifact@v3
         with:
