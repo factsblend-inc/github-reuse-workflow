@@ -39,7 +39,6 @@ jobs:
       - uses: buildjet/cache@v4
         name: Setup pnpm cache
         with:
-          node-version: 20
           path: |
             node_modules
             ${{ steps.pnpm-cache.outputs.STORE_PATH }}
