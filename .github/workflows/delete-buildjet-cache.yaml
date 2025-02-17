@@ -2,7 +2,7 @@ name: Manually Delete BuildJet Cache
 on:
   workflow_dispatch:
     inputs:
-      cache_key:
+      cache-key:
         description: 'BuildJet Cache Key to Delete'
         required: true
         type: string
@@ -14,4 +14,4 @@ jobs:
         uses: actions/checkout@v4
       - uses: buildjet/cache-delete@v1
         with:
-          cache_key: ${{ inputs.cache_key }}
+          cache_key: ${{ inputs.cache-key }}
