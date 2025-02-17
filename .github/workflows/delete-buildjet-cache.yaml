@@ -1,6 +1,6 @@
 name: Manually Delete BuildJet Cache
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       cache-key:
         description: 'BuildJet Cache Key to Delete'
