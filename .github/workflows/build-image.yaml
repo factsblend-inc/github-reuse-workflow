@@ -64,5 +64,5 @@ jobs:
           platforms: ${{ inputs.build-platforms }}
           push: true
           tags: ${{ inputs.docker-image }}:${{ inputs.docker-tag }}
-          cache-from: type=gha,ref=${{ inputs.docker-image }}:latest
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=${{ inputs.docker-image }}:latest
+          cache-to: type=registry,ref=${{ inputs.docker-image }}:buildcache,mode=max
