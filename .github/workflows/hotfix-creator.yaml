@@ -77,7 +77,7 @@ jobs:
 
       - name: Calculate hotfix names
         id: names
-        uses: factsblend-inc/github-reuse-workflow/.github/actions/hotfix-naming.yaml@main
+        uses: ./.github/actions/hotfix-naming.yaml
         with:
           base_tag: ${{ inputs.base_tag }}
           hotfix_version: ${{ inputs.hotfix_version }}
