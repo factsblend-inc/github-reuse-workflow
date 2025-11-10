@@ -1,0 +1,262 @@
+name: Hotfix Creator
+
+on:
+  workflow_call:
+    inputs:
+      base_tag:
+        description: "Base tag to create hotfix from (e.g., v6.5.27)"
+        required: true
+        type: string
+      hotfix_version:
+        description: "Hotfix version number (e.g., 1, 2, critical, urgent)"
+        required: true
+        type: string
+        default: "1"
+    outputs:
+      hotfix_branch:
+        description: "Created hotfix branch name"
+        value: ${{ jobs.create-hotfix.outputs.hotfix_branch }}
+      hotfix_name:
+        description: "Created hotfix name"
+        value: ${{ jobs.create-hotfix.outputs.hotfix_name }}
+      pr_number:
+        description: "Pull request number (if created)"
+        value: ${{ jobs.create-hotfix.outputs.pr_number }}
+      pr_url:
+        description: "Pull request URL (if created)"
+        value: ${{ jobs.create-hotfix.outputs.pr_url }}
+  workflow_dispatch:
+    inputs:
+      base_tag:
+        description: "Base tag to create hotfix from (e.g., v6.5.27)"
+        required: true
+        type: string
+      hotfix_version:
+        description: "Hotfix version number (e.g., 1, 2, critical, urgent)"
+        required: true
+        type: string
+        default: "1"
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  create-hotfix:
+    runs-on: buildjet-2vcpu-ubuntu-2204
+    outputs:
+      hotfix_branch: ${{ steps.names.outputs.hotfix-branch }}
+      hotfix_name: ${{ steps.names.outputs.hotfix-name }}
+      pr_number: ${{ steps.check-pr.outputs.pr-number }}
+      pr_url: ${{ steps.check-pr.outputs.pr-url }}
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
+          ref: main
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+
+      - name: Setup GitHub CLI
+        run: |
+          # GitHub CLI is pre-installed on GitHub runners, but let's ensure it's authenticated
+          echo "GitHub CLI version: $(gh --version)"
+
+      - name: Validate base tag exists
+        run: |
+          if ! git tag -l | grep -q "^${{ inputs.base_tag }}$"; then
+            echo "❌ Error: Tag '${{ inputs.base_tag }}' does not exist"
+            exit 1
+          fi
+          echo "✅ Base tag '${{ inputs.base_tag }}' found"
+
+      - name: Calculate hotfix names
+        id: names
+        uses: factsblend-inc/github-reuse-workflow/.github/actions/hotfix-naming.yaml@main
+        with:
+          base_tag: ${{ inputs.base_tag }}
+          hotfix_version: ${{ inputs.hotfix_version }}
+
+      - name: Create hotfix branch
+        run: |
+          # Use pre-calculated branch name from environment variables
+
+          # Check if branch already exists
+          if git show-ref --verify --quiet refs/remotes/origin/"$HOTFIX_BRANCH"; then
+            echo "⚠️ Branch $HOTFIX_BRANCH already exists. Switching to it..."
+            git checkout "$HOTFIX_BRANCH"
+            git pull origin "$HOTFIX_BRANCH"
+          else
+            echo "✅ Creating new branch from tag ${{ inputs.base_tag }}"
+            # Create branch from the base tag
+            git checkout -b "$HOTFIX_BRANCH" "${{ inputs.base_tag }}"
+          fi
+
+          # Always update workflows to latest version from main
+          echo "📋 Updating workflows to latest version..."
+          git checkout main -- .github/workflows/
+
+          # Check if there are any changes (staged or unstaged)
+          if ! git diff --quiet || ! git diff --cached --quiet; then
+            git add .github/workflows/
+            git commit -m "ci: 🎡 update workflows to latest version for hotfix"
+            echo "✅ Committed workflow updates"
+          else
+            echo "ℹ️ No workflow changes needed"
+          fi
+
+          # Always create an initial hotfix commit if this is a new branch
+          if ! git show-ref --verify --quiet refs/remotes/origin/"$HOTFIX_BRANCH"; then
+            # Create an empty commit to establish the branch difference from base tag
+            git commit --allow-empty -m "chore: 🤖 initialize hotfix branch for $HOTFIX_NAME" \
+              -m "" \
+              -m "Base Version: ${{ inputs.base_tag }}" \
+              -m "Hotfix Version: ${{ inputs.hotfix_version }}" \
+              -m "Created: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" \
+              -m "" \
+              -m "This empty commit ensures the hotfix branch differs from the base tag" \
+              -m "and allows pull request creation. Add your hotfix changes in subsequent commits."
+            echo "✅ Created initial hotfix commit (empty)"
+          fi
+
+          # Push the hotfix branch
+          git push origin "$HOTFIX_BRANCH"
+
+          echo "✅ Hotfix branch ready: $HOTFIX_BRANCH"
+
+      - name: Check if PR already exists
+        id: check-pr
+        run: |
+          # Use pre-calculated branch name from environment variables
+
+          # Use GitHub CLI to check for existing PR
+          if gh pr list --head "$HOTFIX_BRANCH" --base main --json number,url --jq '.[0]' | grep -q "number"; then
+            PR_INFO=$(gh pr list --head "$HOTFIX_BRANCH" --base main --json number,url,title --jq '.[0]')
+            PR_NUMBER=$(echo "$PR_INFO" | jq -r '.number')
+            PR_URL=$(echo "$PR_INFO" | jq -r '.url')
+            echo "pr-exists=true" >> $GITHUB_OUTPUT
+            echo "pr-number=$PR_NUMBER" >> $GITHUB_OUTPUT
+            echo "pr-url=$PR_URL" >> $GITHUB_OUTPUT
+            echo "⚠️ PR already exists: #$PR_NUMBER"
+            echo "🔗 URL: $PR_URL"
+          else
+            echo "pr-exists=false" >> $GITHUB_OUTPUT
+            echo "✅ No existing PR found, will create new one"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
+
+      - name: Create Pull Request
+        if: steps.check-pr.outputs.pr-exists == 'false'
+        id: create-pr
+        run: |
+          # Use pre-calculated names from environment variables
+          PR_TITLE="🩹 Hotfix: $HOTFIX_NAME"
+
+          gh pr create \
+            --title "$PR_TITLE" \
+            --head "$HOTFIX_BRANCH" \
+            --base main \
+            --body "## 🩹 Hotfix Deployment
+
+          **Base Version:** ${{ inputs.base_tag }}
+          **Hotfix Version:** ${{ inputs.hotfix_version }}
+          **Branch:** \`$HOTFIX_BRANCH\`
+          **Created:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+          ### 📋 Checklist
+          - [x] Hotfix branch created from tag \`${{ inputs.base_tag }}\`
+          - [x] Latest workflows applied
+          - [ ] **Apply your hotfix changes to this branch**
+          - [ ] Test in staging environment  
+          - [ ] Verify hotfix resolves the issue
+          - [ ] Ready for production deployment
+
+          ### 🚀 Deployment Status
+          - ✅ Hotfix branch created
+          - ✅ Latest workflows applied
+          - ⏳ **Awaiting hotfix changes**
+          - ⏳ Awaiting staging deployment (after changes)
+
+          ### 📝 Next Steps
+          1. 📝 **Make your hotfix changes on this branch**
+          2. 🚀 Push changes (will auto-deploy to staging)
+          3. 🧪 Test in staging environment
+          4. ✅ Review and merge this PR
+          5. 📦 Create hotfix tag for production deployment
+
+          ### 🎯 Hotfix Details
+          See \`HOTFIX_README.md\` in the branch for more details and tracking."
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
+
+      - name: Update existing PR (if exists)
+        if: steps.check-pr.outputs.pr-exists == 'true'
+        run: |
+          PR_NUMBER="${{ steps.check-pr.outputs.pr-number }}"
+
+          # Add a comment to the existing PR
+          gh pr comment "$PR_NUMBER" --body "🔄 **Hotfix workflow re-triggered**
+
+          **Timestamp:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          **Action:** Workflows updated to latest version
+
+          The hotfix branch has been refreshed with the latest workflow files from main.
+
+          ✅ Branch is ready for your hotfix changes!"
+
+          echo "✅ Updated existing PR #$PR_NUMBER with latest status"
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
+
+      - name: Summary
+        run: |
+          # Use pre-calculated branch name from environment variables
+
+          echo "## 🎉 Hotfix Setup Complete!"
+          echo ""
+          echo "**Branch:** \`$HOTFIX_BRANCH\`"
+          echo "**Base:** ${{ inputs.base_tag }}"
+          echo "**Status:** Ready for development"
+          echo ""
+
+          if [ "${{ steps.check-pr.outputs.pr-exists }}" == "true" ]; then
+            echo "**Pull Request:** #${{ steps.check-pr.outputs.pr-number }} (existing, updated)"
+            echo "**URL:** ${{ steps.check-pr.outputs.pr-url }}"
+          else
+            echo "**Pull Request:** Created and ready for review"
+          fi
+
+          echo ""
+          echo "### 🚀 Quick Start Commands:"
+          echo "\`\`\`bash"
+          echo "# Switch to hotfix branch"
+          echo "git checkout $HOTFIX_BRANCH"
+          echo "git pull origin $HOTFIX_BRANCH"
+          echo ""
+          echo "# Make your hotfix changes"
+          echo "# ... edit files ..."
+          echo ""
+          echo "# Commit and push changes"
+          echo "git add ."
+          echo "git commit -m \"fix: your hotfix description\""
+          echo "git push origin $HOTFIX_BRANCH"
+          echo "\`\`\`"
+          echo ""
+          echo "### 📋 Next Steps:"
+          echo "1. 📝 **Checkout the hotfix branch and make changes**"
+          echo "2. 🚀 Push changes (auto-deploys to staging)"
+          echo "3. 🧪 Test in staging environment"
+          echo "4. ✅ Review and merge the PR"
+          echo "5. 📦 Create hotfix tag for production deployment"
+          echo ""
+          echo "### 📁 Branch Contents:"
+          echo "- ✅ Based on tag \`${{ inputs.base_tag }}\`"
+          echo "- ✅ Latest workflow files applied"
+          echo "- ✅ \`HOTFIX_README.md\` for tracking changes"
+          echo "- ⏳ Ready for your hotfix code changes"
