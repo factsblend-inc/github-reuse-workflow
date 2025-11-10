@@ -50,11 +50,11 @@ jobs:
       pr_number: ${{ steps.check-pr.outputs.pr-number }}
       pr_url: ${{ steps.check-pr.outputs.pr-url }}
     steps:
-      - name: Checkout main branch
+      - name: Checkout base tag
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.PAT }}
-          ref: main
+          ref: ${{ inputs.base_tag }}
           fetch-depth: 0
 
       - name: Configure Git
