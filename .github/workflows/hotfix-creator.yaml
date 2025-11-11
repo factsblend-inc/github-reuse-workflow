@@ -123,9 +123,15 @@ jobs:
             git checkout -b "$HOTFIX_BRANCH" "${{ inputs.base_tag }}"
           fi
 
-          # Always update workflows to latest version from main
-          echo "📋 Updating workflows to latest version..."
-          git checkout main -- .github/workflows/
+          # Always update workflows to latest version from the caller repo's main branch ONLY
+          echo "📋 Updating workflows to latest version from origin/main..."
+          if git ls-remote --exit-code --heads origin main >/dev/null 2>&1; then
+            echo "🔎 Found origin/main"
+            git fetch origin main --depth=1 || git fetch origin main
+            git checkout origin/main -- .github/workflows/ || echo "⚠️ Failed to checkout origin/main workflows"
+          else
+            echo "❌ origin/main branch not found. Cannot refresh workflow files."
+          fi
 
           # Check if there are any changes (staged or unstaged)
           if ! git diff --quiet || ! git diff --cached --quiet; then
