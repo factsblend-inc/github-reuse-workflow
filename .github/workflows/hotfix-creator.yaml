@@ -134,26 +134,34 @@ jobs:
           fi
 
           # Check if there are any changes (staged or unstaged)
+          WORKFLOW_UPDATED=false
           if ! git diff --quiet || ! git diff --cached --quiet; then
             git add .github/workflows/
             git commit -m "ci: 🎡 update workflows to latest version for hotfix"
             echo "✅ Committed workflow updates"
+            WORKFLOW_UPDATED=true
           else
             echo "ℹ️ No workflow changes needed"
           fi
 
           # Always create an initial hotfix commit if this is a new branch
+          # This ensures the branch differs from main and allows PR creation
           if ! git show-ref --verify --quiet refs/remotes/origin/"$HOTFIX_BRANCH"; then
-            # Create an empty commit to establish the branch difference from base tag
-            git commit --allow-empty -m "chore: 🤖 initialize hotfix branch for $HOTFIX_NAME" \
-              -m "" \
-              -m "Base Version: ${{ inputs.base_tag }}" \
-              -m "Hotfix Version: ${{ inputs.hotfix_version }}" \
-              -m "Created: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" \
-              -m "" \
-              -m "This empty commit ensures the hotfix branch differs from the base tag" \
-              -m "and allows pull request creation. Add your hotfix changes in subsequent commits."
-            echo "✅ Created initial hotfix commit (empty)"
+            # Check if we need to create an empty commit (only if workflows weren't updated)
+            if [ "$WORKFLOW_UPDATED" = false ]; then
+              # Create an empty commit to ensure branch differs from main
+              git commit --allow-empty -m "chore: 🤖 initialize hotfix branch for $HOTFIX_NAME" \
+                -m "" \
+                -m "Base Version: ${{ inputs.base_tag }}" \
+                -m "Hotfix Version: ${{ inputs.hotfix_version }}" \
+                -m "Created: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" \
+                -m "" \
+                -m "This empty commit ensures the hotfix branch differs from main" \
+                -m "and allows pull request creation. Add your hotfix changes in subsequent commits."
+              echo "✅ Created initial hotfix commit (empty)"
+            else
+              echo "ℹ️ Skipping empty commit - workflow update already committed"
+            fi
           fi
 
           # Push the hotfix branch
@@ -189,6 +197,27 @@ jobs:
         run: |
           # Use pre-calculated names from environment variables
           PR_TITLE="🩹 Hotfix: $HOTFIX_NAME"
+
+          # Check if there are commits between main and hotfix branch
+          git fetch origin main
+          COMMITS_AHEAD=$(git rev-list --count origin/main.."$HOTFIX_BRANCH" 2>/dev/null || echo "0")
+          
+          if [ "$COMMITS_AHEAD" -eq 0 ]; then
+            echo "⚠️ No commits between main and $HOTFIX_BRANCH. Creating initialization commit..."
+            git checkout "$HOTFIX_BRANCH"
+            git commit --allow-empty -m "chore: 🤖 initialize hotfix branch for $HOTFIX_NAME" \
+              -m "" \
+              -m "Base Version: ${{ inputs.base_tag }}" \
+              -m "Hotfix Version: ${{ inputs.hotfix_version }}" \
+              -m "Created: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" \
+              -m "" \
+              -m "This empty commit ensures the hotfix branch differs from main" \
+              -m "and allows pull request creation. Add your hotfix changes in subsequent commits."
+            git push origin "$HOTFIX_BRANCH"
+            echo "✅ Initialization commit created and pushed"
+          else
+            echo "✅ Found $COMMITS_AHEAD commit(s) ahead of main"
+          fi
 
           gh pr create \
             --title "$PR_TITLE" \
