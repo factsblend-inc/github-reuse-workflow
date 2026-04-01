@@ -43,7 +43,7 @@ permissions:
 
 jobs:
   create-hotfix:
-    runs-on: buildjet-2vcpu-ubuntu-2204
+    runs-on: ubuntu-latest
     outputs:
       hotfix_branch: ${{ steps.names.outputs.hotfix-branch }}
       hotfix_name: ${{ steps.names.outputs.hotfix-name }}

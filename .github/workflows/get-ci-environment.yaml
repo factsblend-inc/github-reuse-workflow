@@ -96,7 +96,7 @@ on:
 
 jobs:
   get-environment:
-    runs-on: buildjet-2vcpu-ubuntu-2204
+    runs-on: ubuntu-latest
     outputs:
       CI_REPOSITORY_SLUG: ${{ steps.ci-environment.outputs.CI_REPOSITORY_SLUG }}
       CI_REPOSITORY_OWNER: ${{ steps.ci-environment.outputs.CI_REPOSITORY_OWNER }}

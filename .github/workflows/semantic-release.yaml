@@ -20,7 +20,7 @@ on:
 
 jobs:
   release-tag:
-    runs-on: buildjet-2vcpu-ubuntu-2204
+    runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
       new_release_published: ${{ steps.tag.outputs.new_release_published }}
