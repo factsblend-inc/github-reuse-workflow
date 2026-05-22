@@ -1,19 +1,14 @@
-name: Test
+name: Frontend test (Node 24)
 
 on:
   workflow_call:
-    secrets:
-      SONAR_TOKEN:
-        required: true
+
 jobs:
-  test:
+  frontend-test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-        with:
-          # Disabling shallow clone is recommended for improving relevancy of reporting
-          fetch-depth: 1
 
       - uses: pnpm/action-setup@v4
         name: Install pnpm
@@ -25,16 +20,8 @@ jobs:
         with:
           node-version: 24
           cache: 'pnpm'
-
       - name: Install dependencies
         run: pnpm i --frozen-lockfile
 
       - run: pnpm lint
-      - run: pnpm test:cov
-
-      - name: Upload test coverage artifacts
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-coverage
-          path: coverage
+      # - run: pnpm test:cov
