@@ -51,7 +51,7 @@ jobs:
       pr_url: ${{ steps.check-pr.outputs.pr-url }}
     steps:
       - name: Checkout base tag
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           token: ${{ secrets.PAT }}
           ref: ${{ inputs.base_tag }}
